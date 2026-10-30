@@ -1,0 +1,70 @@
+-p, --print
+Print mode: process prompt and exit without interactive session.
+-c, --continue
+Continue the most recent conversation.
+-r ID, --resume ID
+Resume a specific conversation by session ID or name.
+-v, --version
+Display version information.
+--model MODEL
+Specify the Claude model to use (aliases: sonnet, opus, haiku, or full model name).
+--max-turns N
+Maximum number of agentic turns in non-interactive mode.
+--max-budget-usd AMOUNT
+Maximum dollar amount for API calls (print mode only).
+--output-format FORMAT
+Output format: text, json, or stream-json.
+--input-format FORMAT
+Input format for print mode.
+--tools TOOLS
+Restrict available built-in tools (e.g., "Bash,Edit,Read").
+--allowedTools TOOLS
+Tools that execute without prompting.
+--disallowedTools TOOLS
+Tools removed from context.
+--permission-mode MODE
+Begin in specified permission mode (e.g., plan).
+--system-prompt PROMPT
+Replace the entire default system prompt.
+--append-system-prompt PROMPT
+Append additional instructions to the default prompt.
+--add-dir PATHS
+Add additional working directories.
+--mcp-config FILE
+Load MCP servers from JSON configuration file.
+--chrome
+Enable Chrome browser integration.
+--ide
+Auto-connect to IDE on startup.
+--remote
+Create web session on claude.ai.
+--teleport
+Resume web session in local terminal.
+--verbose
+Enable verbose logging output.
+--debug FILTER
+Enable debug mode with optional filtering.
+--dangerously-skip-permissions
+Skip permission prompts (use with caution in trusted environments).
+--help
+Display help information.
+CONFIGURATION
+CLAUDE.md
+Project-level instructions and context loaded automatically from the working directory.
+~/.claude/settings.json
+Global user settings including permissions, allowed tools, and default behaviors.
+.claude/settings.json
+Project-level settings for permissions and tool configuration.
+SLASH COMMANDS
+/init
+Initialize and generate a CLAUDE.md file for the project.
+/clear
+Reset conversation context.
+/model
+Switch between available models.
+/compact
+Manually compress conversation history.
+/cost
+Display session cost information.
+/help
+Display available commands and options.
