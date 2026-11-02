@@ -1,0 +1,113 @@
+from mysql.connector import pooling
+from mysql.connector import Error
+
+class PooledMySQLTowerSlotManager:
+    def __init__(self, host="localhost", database="tower_db", user="root", password="your_password", total_slots=50):
+        self.total_slots = total_slots
+        try:
+            # Create a connection pool to safely handle concurrent requests
+            self.connection_pool = pooling.MySQLConnectionPool(
+                pool_name="tower_pool",
+                pool_size=5,  # Number of pre-allocated connections
+                pool_reset_session=True,
+                host=host,
+                database=database,
+                user=user,
+                password=password
+            )
+            self._init_db()
+        except Error as e:
+            print(f"Error creating connection pool: {e}")
+
+    def _get_connection(self):
+        return self.connection_pool.get_connection()
+
+    def _init_db(self):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS slots (
+                    slot_id INT PRIMARY KEY,
+                    status VARCHAR(20) NOT NULL,
+                    client_id VARCHAR(100)
+                )
+            """)
+            cursor.execute("SELECT COUNT(*) FROM slots")
+            if cursor.fetchone()[0] == 0:
+                for i in range(1, self.total_slots + 1):
+                    cursor.execute(
+                        "INSERT INTO slots (slot_id, status, client_id) VALUES (%s, %s, %s)", 
+                        (i, "available", None)
+                    )
+                conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+
+    def allocate_slot(self, client_id: str):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT slot_id FROM slots 
+                WHERE status = 'available' 
+                ORDER BY slot_id ASC 
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if not row:
+                return None
+            
+            slot_id = row[0]
+            cursor.execute("""
+                UPDATE slots 
+                SET status = 'occupied', client_id = %s 
+                WHERE slot_id = %s
+            """, (client_id, slot_id))
+            conn.commit()
+            return slot_id
+        finally:
+            cursor.close()
+            conn.close() # Returns connection back to the pool
+
+    def release_slot(self, slot_id: int):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT status FROM slots WHERE slot_id = %s", (slot_id,))
+            row = cursor.fetchone()
+            if not row:
+                return "not_found"
+            if row[0] == "available":
+                return "already_free"
+            
+            cursor.execute("""
+                UPDATE slots 
+                SET status = 'available', client_id = NULL 
+                WHERE slot_id = %s
+            """, (slot_id,))
+            conn.commit()
+            return "success"
+        finally:
+            cursor.close()
+            conn.close()
+
+    def get_metrics(self):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT COUNT(*) FROM slots WHERE status = 'occupied'")
+            occupied_count = cursor.fetchone()[0]
+            open_count = self.total_slots - occupied_count
+            utilization_pct = (occupied_count / self.total_slots) * 100
+            
+            return {
+                "total_slots": self.total_slots,
+                "open_slots": open_count,
+                "occupied_slots": occupied_count,
+                "utilization_percentage": round(utilization_pct, 2)
+            }
+        finally:
+            cursor.close()
+            conn.close()
